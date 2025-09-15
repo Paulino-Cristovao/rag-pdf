@@ -373,22 +373,22 @@ def get_blocked_message(filter_result: FilterResult, reason: str,
     
     base_messages = {
         FilterResult.BLOCKED_OFFENSIVE: {
-            "title": "⚠️ Linguagem Inadequada",
+            "title": "LINGUAGEM INADEQUADA",
             "message": "Por favor, use uma linguagem respeitosa e profissional.",
             "suggestion": "Reformule sua pergunta de forma educada."
         },
         FilterResult.BLOCKED_OFF_TOPIC: {
-            "title": "🏦 Apenas Temas Bancários",
+            "title": "APENAS TEMAS BANCÁRIOS",
             "message": "Este assistente responde apenas sobre serviços bancários de Moçambique.",
             "suggestion": "Faça uma pergunta sobre contas, cartões, transferências ou outros serviços bancários."
         },
         FilterResult.BLOCKED_INAPPROPRIATE: {
-            "title": "🚫 Conteúdo Inadequado",
+            "title": "CONTEÚDO INADEQUADO",
             "message": "Não posso processar este tipo de solicitação.",
             "suggestion": "Faça perguntas sobre procedimentos bancários públicos."
         },
         FilterResult.BLOCKED_SPAM: {
-            "title": "🛡️ Conteúdo Promocional",
+            "title": "CONTEÚDO PROMOCIONAL",
             "message": "Este não é um canal para conteúdo promocional.",
             "suggestion": "Faça perguntas sobre informações bancárias específicas."
         }
@@ -403,7 +403,7 @@ def get_blocked_message(filter_result: FilterResult, reason: str,
 
 {msg_data['message']}
 
-💡 **Sugestão:** {msg_data['suggestion']}"""
+**Sugestão:** {msg_data['suggestion']}"""
     
     if suggested_alternative:
         response += f"\n\n**Exemplo:** {suggested_alternative}"

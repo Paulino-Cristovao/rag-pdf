@@ -52,15 +52,15 @@ python enhanced_interface.py --pdf /path/to/banking_document.pdf
 ```
 
 **Enhanced Features:**
-- 🔒 Confidence scoring (ALTA/MÉDIA/BAIXA)
-- 🛡️ PII protection (masks cards, IBAN, phone, email)
-- 📄 Collapsible source citations
-- 💡 Categorized example questions
-- ⚙️ Advanced controls (temperature, docs-only mode)
-- 🏦 Banking compliance disclaimers
-- 🚫 **Content Guardrails** (NEW): Automatic filtering of inappropriate/off-topic questions
-- 🎨 **Dark Orange Theme**: Professional, warm color scheme
-- 🗑️ **Clear Chat Button**: Reset conversation history with one click
+- Confidence scoring (ALTA/MÉDIA/BAIXA)
+- PII protection (masks cards, IBAN, phone, email)
+- Collapsible source citations
+- Categorized example questions
+- Advanced controls (temperature, docs-only mode)
+- Banking compliance disclaimers
+- **Content Guardrails** (NEW): Automatic filtering of inappropriate/off-topic questions
+- **Dark Orange Theme**: Professional, warm color scheme
+- **Clear Chat Button**: Reset conversation history with one click
 
 ## Content Moderation
 
@@ -74,7 +74,7 @@ The enhanced interface includes comprehensive guardrails that automatically filt
 **Blocked Example:**
 ```
 User: "Qual é a receita do matapa?"
-System: 🏦 Apenas Temas Bancários
+System: APENAS TEMAS BANCÁRIOS
         Este assistente responde apenas sobre serviços bancários de Moçambique.
         Exemplo: Quais são as taxas para transferências bancárias?
 ```
@@ -89,7 +89,7 @@ See `GUARDRAILS_GUIDE.md` for complete documentation.
 - **Responsive Design**: Works well on different screen sizes
 
 ### User Experience
-- **Clear Chat Button**: 🗑️ One-click conversation reset
+- **Clear Chat Button**: One-click conversation reset
 - **Organized Controls**: Settings grouped logically in header
 - **Better Feedback**: Cleaner feedback button layout
 - **Visual Hierarchy**: Important actions more prominent

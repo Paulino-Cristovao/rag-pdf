@@ -36,13 +36,19 @@ def demo_ui_improvements():
         return [], ""
     
     # Create demo interface with dark orange theme
+    custom_theme = gr.themes.Soft(
+        primary_hue=gr.themes.colors.orange,
+        secondary_hue=gr.themes.colors.amber,
+        neutral_hue=gr.themes.colors.gray
+    )
+    
     with gr.Blocks(
         title="Demo - Melhorias UI: Tema Laranja + Botão Limpar",
-        theme=gr.themes.Soft(primary_hue="orange", secondary_hue="amber")
+        theme=custom_theme
     ) as demo:
         
         gr.Markdown("""
-        # 🎨 Demo: Melhorias da Interface
+        # Demo: Melhorias da Interface
         ### Tema Laranja Escuro + Botão Limpar Chat
         
         Esta demonstração mostra as melhorias visuais implementadas:
@@ -55,15 +61,15 @@ def demo_ui_improvements():
         with gr.Row():
             force_docs = gr.Checkbox(
                 value=True, 
-                label="🔒 Responder apenas com base nos documentos"
+                label="Responder apenas com base nos documentos"
             )
             mask_pii = gr.Checkbox(
                 value=True, 
-                label="🛡️ Proteger dados sensíveis (PII)"
+                label="Proteger dados sensíveis (PII)"
             )
             temperature = gr.Slider(
                 0.0, 1.0, value=0.2, step=0.1,
-                label="🌡️ Criatividade"
+                label="Criatividade"
             )
         
         # Chat interface
@@ -84,10 +90,10 @@ def demo_ui_improvements():
             )
             with gr.Column(scale=1):
                 send_btn = gr.Button("Enviar", variant="primary", size="lg")
-                clear_btn = gr.Button("🗑️ Limpar", variant="secondary", size="lg")
+                clear_btn = gr.Button("Limpar Chat", variant="secondary", size="lg")
         
         # Example buttons
-        gr.Markdown("### 💡 Exemplos para testar:")
+        gr.Markdown("### Exemplos para testar:")
         with gr.Row():
             ex1 = gr.Button("Taxas de transferência", size="sm")
             ex2 = gr.Button("Como abrir conta?", size="sm")
@@ -98,9 +104,9 @@ def demo_ui_improvements():
         with gr.Row():
             with gr.Column(scale=3):
                 with gr.Row():
-                    feedback_good = gr.Button("👍 Útil", size="sm")
-                    feedback_bad = gr.Button("👎 Não útil", size="sm")
-                    feedback_unclear = gr.Button("❓ Confuso", size="sm")
+                    feedback_good = gr.Button("Útil", size="sm")
+                    feedback_bad = gr.Button("Não útil", size="sm")
+                    feedback_unclear = gr.Button("Confuso", size="sm")
             with gr.Column(scale=1):
                 gr.Markdown("")  # Spacer
         
@@ -109,12 +115,12 @@ def demo_ui_improvements():
         # Footer
         gr.Markdown("""
         ---
-        ⚖️ **Interface Demo** - Tema laranja escuro com melhor usabilidade
+        **Interface Demo** - Tema laranja escuro com melhor usabilidade
         
         **Principais melhorias:**
-        - 🎨 Cores mais quentes e profissionais
-        - 🗑️ Botão limpar para reset da conversa
-        - 📱 Layout responsivo e intuitivo
+        - Cores mais quentes e profissionais
+        - Botão limpar para reset da conversa
+        - Layout responsivo e intuitivo
         """)
         
         # Event handlers
@@ -157,17 +163,17 @@ def demo_ui_improvements():
         
         # Feedback handlers
         feedback_good.click(
-            lambda: gr.update(visible=True, value="✅ Obrigado! Feedback positivo registado."),
+            lambda: gr.update(visible=True, value="Obrigado! Feedback positivo registado."),
             outputs=feedback_output
         )
         
         feedback_bad.click(
-            lambda: gr.update(visible=True, value="📝 Obrigado! Feedback para melhoria registado."),
+            lambda: gr.update(visible=True, value="Obrigado! Feedback para melhoria registado."),
             outputs=feedback_output
         )
         
         feedback_unclear.click(
-            lambda: gr.update(visible=True, value="💡 Obrigado! Vamos trabalhar para ser mais claros."),
+            lambda: gr.update(visible=True, value="Obrigado! Vamos trabalhar para ser mais claros."),
             outputs=feedback_output
         )
     

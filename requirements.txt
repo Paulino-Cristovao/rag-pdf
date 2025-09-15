@@ -25,4 +25,4 @@ pillow>=10.4.0,<11.0.0
 rich>=10.14.0,<14.0.0
 
 # Web interface
-gradio>=4.0.0
+gradio>=4.20.0

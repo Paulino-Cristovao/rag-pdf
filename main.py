@@ -36,7 +36,7 @@ class RAGPDFApplication:
         self.llm: ChatOpenAI = ChatOpenAI(
             temperature=0,
             openai_api_key=self.openai_api_key,  # type: ignore[call-arg]
-            model_name="gpt-3.5-turbo",  # type: ignore[call-arg]
+            model_name="gpt-4",  # type: ignore[call-arg]
         )
         self.vectorstore: Optional[Chroma] = None
         self.qa_chain: Optional[RetrievalQA] = None

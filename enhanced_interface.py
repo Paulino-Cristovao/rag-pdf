@@ -250,19 +250,19 @@ Resposta:"""
             
             # Create confidence badge
             confidence_color = {
-                'ALTA': '🟢', 'MÉDIA': '🟡', 'BAIXA': '🔴', 'BLOQUEADA': '🚫'
+                'ALTA': '[ALTA]', 'MÉDIA': '[MÉDIA]', 'BAIXA': '[BAIXA]', 'BLOQUEADA': '[BLOQUEADA]'
             }
             
             answer_type_badge = {
-                'supported': '✅ Resposta baseada em documentos',
-                'not_found': '⚠️ Informação não encontrada nos documentos',
-                'error': '❌ Erro no processamento',
-                'blocked': '🚫 Pergunta filtrada pelo sistema de moderação'
+                'supported': 'Resposta baseada em documentos',
+                'not_found': 'Informação não encontrada nos documentos',
+                'error': 'Erro no processamento',
+                'blocked': 'Pergunta filtrada pelo sistema de moderação'
             }
             
             # Format response
-            badge = answer_type_badge.get(result['answer_type'], '❓ Resposta incerta')
-            confidence_indicator = f"{confidence_color.get(result['confidence'], '⚪')} Confiança: {result['confidence']}"
+            badge = answer_type_badge.get(result['answer_type'], 'Resposta incerta')
+            confidence_indicator = f"{confidence_color.get(result['confidence'], '[DESCONHECIDA]')} Confiança: {result['confidence']}"
             
             # Format response based on type
             if result['answer_type'] == 'blocked':
@@ -278,7 +278,7 @@ Resposta:"""
 {badge} · {confidence_indicator}
 
 <details>
-<summary>📄 Ver fontes ({len(result['sources'])} documentos)</summary>
+<summary>Ver fontes ({len(result['sources'])} documentos)</summary>
 
 {sources_md}
 
@@ -297,34 +297,40 @@ Resposta:"""
             return [], ""
         
         # Create interface with dark orange theme
+        custom_theme = gr.themes.Soft(
+            primary_hue=gr.themes.colors.orange,
+            secondary_hue=gr.themes.colors.amber,
+            neutral_hue=gr.themes.colors.gray
+        )
+        
         with gr.Blocks(
             title="Assistente Bancário de Moçambique - Versão Avançada",
-            theme=gr.themes.Soft(primary_hue="orange", secondary_hue="amber")
+            theme=custom_theme
         ) as interface:
             
             # Header
             gr.Markdown("""
-            # 🏦 Assistente Bancário de Moçambique
+            # Assistente Bancário de Moçambique
             ### Versão Avançada com Controlo de Confiança e Conformidade
             
             Faça perguntas sobre produtos bancários, procedimentos e regulamentações em Moçambique.
             
-            🛡️ **Sistema de Moderação Ativo:** Filtra automaticamente conteúdo inadequado e perguntas fora do âmbito bancário.
+            **Sistema de Moderação Ativo:** Filtra automaticamente conteúdo inadequado e perguntas fora do âmbito bancário.
             """)
             
             # Settings row
             with gr.Row():
                 force_docs = gr.Checkbox(
                     value=True, 
-                    label="🔒 Responder apenas com base nos documentos"
+                    label="Responder apenas com base nos documentos"
                 )
                 mask_pii = gr.Checkbox(
                     value=True, 
-                    label="🛡️ Proteger dados sensíveis (PII)"
+                    label="Proteger dados sensíveis (PII)"
                 )
                 temperature = gr.Slider(
                     0.0, 1.0, value=0.2, step=0.1,
-                    label="🌡️ Criatividade (0=conservador, 1=criativo)"
+                    label="Criatividade (0=conservador, 1=criativo)"
                 )
             
             # Chat interface
@@ -345,24 +351,24 @@ Resposta:"""
                 )
                 with gr.Column(scale=1):
                     send_btn = gr.Button("Enviar", variant="primary", size="lg")
-                    clear_btn = gr.Button("🗑️ Limpar", variant="secondary", size="lg")
+                    clear_btn = gr.Button("Limpar Chat", variant="secondary", size="lg")
             
             # Example buttons by category
-            gr.Markdown("### 💡 Exemplos por categoria:")
+            gr.Markdown("### Exemplos por categoria:")
             
             with gr.Row():
                 with gr.Column():
-                    gr.Markdown("**💳 Contas e Cartões**")
+                    gr.Markdown("**Contas e Cartões**")
                     ex_conta = gr.Button("Como abrir conta corrente?", size="sm")
                     ex_cartao = gr.Button("Taxas do cartão de débito?", size="sm")
                 
                 with gr.Column():
-                    gr.Markdown("**💸 Transferências**")
+                    gr.Markdown("**Transferências**")
                     ex_transfer = gr.Button("Taxas de transferências?", size="sm")
                     ex_limite = gr.Button("Limites de transferência?", size="sm")
                 
                 with gr.Column():
-                    gr.Markdown("**📱 Canais Digitais**")
+                    gr.Markdown("**Canais Digitais**")
                     ex_mobile = gr.Button("Como usar mobile banking?", size="sm")
                     ex_ussd = gr.Button("Códigos USSD disponíveis?", size="sm")
             
@@ -370,9 +376,9 @@ Resposta:"""
             with gr.Row():
                 with gr.Column(scale=3):
                     with gr.Row():
-                        feedback_good = gr.Button("👍 Útil", size="sm")
-                        feedback_bad = gr.Button("👎 Não útil", size="sm")
-                        feedback_unclear = gr.Button("❓ Confuso", size="sm")
+                        feedback_good = gr.Button("Útil", size="sm")
+                        feedback_bad = gr.Button("Não útil", size="sm")
+                        feedback_unclear = gr.Button("Confuso", size="sm")
                 with gr.Column(scale=1):
                     gr.Markdown("")  # Spacer
             
@@ -381,10 +387,10 @@ Resposta:"""
             # Footer with compliance info
             gr.Markdown(f"""
             ---
-            ⚖️ **Aviso Legal:** Esta é informação geral. Confirme sempre com o seu banco.
+            **Aviso Legal:** Esta é informação geral. Confirme sempre com o seu banco.
             
-            🔄 **Última atualização:** {self.knowledge_base_date} | 
-            🔐 **Privacidade:** Dados sensíveis são automaticamente protegidos
+            **Última atualização:** {self.knowledge_base_date} | 
+            **Privacidade:** Dados sensíveis são automaticamente protegidos
             """)
             
             # Event handlers

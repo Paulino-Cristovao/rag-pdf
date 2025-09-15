@@ -4,7 +4,7 @@
 
 The Banking RAG Assistant includes a comprehensive content moderation system that automatically filters inappropriate questions and ensures users get relevant, safe responses about banking services in Mozambique.
 
-## 🛡️ Protection Layers
+## Protection Layers
 
 ### 1. **Politeness Filter**
 Blocks offensive, rude, or disrespectful language:
@@ -16,7 +16,7 @@ Blocks offensive, rude, or disrespectful language:
 **Example Blocked:**
 ```
 Input: "Que merda de banco é este?"
-Output: ⚠️ Linguagem Inadequada
+Output: LINGUAGEM INADEQUADA
         Por favor, use uma linguagem respeitosa e profissional.
 ```
 
@@ -30,7 +30,7 @@ Ensures questions are related to banking services:
 **Example Blocked:**
 ```
 Input: "Qual é a receita do matapa?"
-Output: 🏦 Apenas Temas Bancários
+Output: APENAS TEMAS BANCÁRIOS
         Este assistente responde apenas sobre serviços bancários de Moçambique.
         Exemplo: Quais são as taxas para transferências bancárias?
 ```
@@ -44,7 +44,7 @@ Blocks requests for sensitive information or illegal activities:
 **Example Blocked:**
 ```
 Input: "Diga-me a sua senha de administrador"
-Output: 🚫 Conteúdo Inadequado
+Output: CONTEÚdO INADEQUADO
         Não posso processar este tipo de solicitação.
 ```
 
@@ -63,7 +63,7 @@ Automatically detects and blocks non-banking topics:
 - **Food**: receitas, restaurantes, pratos
 - **Travel**: turismo, hotéis, viagens
 
-## 🎯 How It Works
+## How It Works
 
 ### Validation Process
 ```python
@@ -86,7 +86,7 @@ def validate_question(question: str) -> GuardrailResponse:
 - **BLOCKED_SPAM**: Promotional/spam content
 - **REQUIRES_REVIEW**: Low relevance, needs human review
 
-## 📊 Configuration Examples
+## Configuration Examples
 
 ### Banking Keywords (Expandable)
 ```python
@@ -116,7 +116,7 @@ class GuardrailSettings:
     require_human_review_threshold = 0.5
 ```
 
-## 🔧 Integration Examples
+## Integration Examples
 
 ### Basic Usage
 ```python
@@ -157,7 +157,7 @@ def process_with_guardrails(question: str):
         return generate_educational_response(result)
 ```
 
-## 📈 Monitoring & Analytics
+## Monitoring & Analytics
 
 ### Key Metrics to Track
 ```python
@@ -181,7 +181,7 @@ moderation_metrics = {
 - **False negative tracking**: Inappropriate questions that passed
 - **User feedback**: thumbs up/down on blocked messages
 
-## 🛠️ Customization for Different Banks
+## Customization for Different Banks
 
 ### Bank-Specific Keywords
 ```python
@@ -213,7 +213,7 @@ mozambique_context = {
 }
 ```
 
-## 🚨 Safety Features
+## Safety Features
 
 ### Privacy Protection
 ```python
@@ -238,7 +238,7 @@ class RateLimiter:
         pass
 ```
 
-## 📚 Best Practices
+## Best Practices
 
 ### 1. **Gradual Implementation**
 - Start with basic filters (offensive, off-topic)
@@ -268,7 +268,7 @@ def ab_test_guardrails():
 - Admin override capabilities
 - Regular filter updates based on new patterns
 
-## 🔄 Future Enhancements
+## Future Enhancements
 
 ### Machine Learning Integration
 ```python

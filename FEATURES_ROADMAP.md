@@ -1,6 +1,6 @@
 # Features Roadmap - Banking RAG Assistant
 
-## ✅ Implemented (Quick Wins)
+## Implemented (Quick Wins)
 
 ### Trust & Compliance
 - **Source Citations**: Collapsible sources with page numbers and snippets
@@ -16,7 +16,7 @@
 - **Enhanced Controls**: Temperature slider, PII masking toggle
 - **Source Expandability**: Collapsible source details
 
-## 🚧 Next Phase (Medium Priority)
+## Next Phase (Medium Priority)
 
 ### Advanced Trust Features
 ```python
@@ -55,7 +55,7 @@ settings = {
 }
 ```
 
-## 🔮 Advanced Features (Future)
+## Advanced Features (Future)
 
 ### Ops & Evaluation
 ```python
@@ -110,7 +110,7 @@ class PrivacyManager:
 - **Image OCR**: Extract text from banking forms/screenshots
 - **Multi-language**: Support for English, Portuguese variants
 
-## 🛠️ Technical Implementation Priority
+## Technical Implementation Priority
 
 ### Phase 1: Trust & Quality (2-3 weeks)
 1. Enhanced confidence scoring with ML model
@@ -136,7 +136,7 @@ class PrivacyManager:
 3. API endpoints for integration
 4. Compliance reporting and audit trails
 
-## 🎯 Success Metrics
+## Success Metrics
 
 ### User Experience
 - **Response Time**: < 3 seconds average
@@ -156,7 +156,7 @@ class PrivacyManager:
 - **Compliance**: 100% regulatory requirement coverage
 - **Cost Efficiency**: 40% reduction in support costs
 
-## 🚀 Quick Implementation Guide
+## Quick Implementation Guide
 
 To add features incrementally:
 
