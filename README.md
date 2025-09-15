@@ -45,20 +45,21 @@ python main.py --pdf /path/to/banking_document.pdf --interface web
 python main.py --pdf /path/to/banking_document.pdf --interface cli
 ```
 
-### Enhanced Version (Recommended)
+### Complete Application (main.py)
+The main application now includes all enhanced features:
 ```bash
-# Advanced interface with trust & compliance features
-python enhanced_interface.py --pdf /path/to/banking_document.pdf
+# Complete interface with all features
+python main.py --pdf /path/to/banking_document.pdf --interface web
 ```
 
-**Enhanced Features:**
+**Included Features:**
 - Confidence scoring (ALTA/MÉDIA/BAIXA)
 - PII protection (masks cards, IBAN, phone, email)
 - Collapsible source citations
 - Categorized example questions
 - Advanced controls (temperature, docs-only mode)
 - Banking compliance disclaimers
-- **Content Guardrails** (NEW): Automatic filtering of inappropriate/off-topic questions
+- **Content Guardrails**: Automatic filtering of inappropriate/off-topic questions
 - **Dark Orange Theme**: Professional, warm color scheme
 - **Clear Chat Button**: Reset conversation history with one click
 
@@ -94,12 +95,6 @@ See `GUARDRAILS_GUIDE.md` for complete documentation.
 - **Better Feedback**: Cleaner feedback button layout
 - **Visual Hierarchy**: Important actions more prominent
 
-### Demo Interface
-Test the UI improvements with the demo:
-```bash
-python demo_ui_improvements.py
-# Access at http://localhost:7861
-```
 
 ## Development
 
@@ -131,7 +126,8 @@ black . && isort . && mypy main.py && flake8 .
 
 ```
 rag-pdf/
-├── main.py              # Main application
+├── main.py              # Complete application with all features
+├── guardrails.py        # Content moderation system
 ├── requirements.txt     # Production dependencies
 ├── requirements-dev.txt # Development dependencies
 ├── .env.example        # Environment template
@@ -139,6 +135,8 @@ rag-pdf/
 ├── mypy.ini           # MyPy configuration
 ├── pyproject.toml     # Tool configurations
 ├── setup.sh           # Automated setup script
+├── GUARDRAILS_GUIDE.md # Content moderation documentation
+├── FEATURES_ROADMAP.md # Future development roadmap
 └── .github/
     └── workflows/
         └── ci.yml     # CI/CD pipeline
