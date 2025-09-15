@@ -46,12 +46,14 @@ class BankingContentGuardrails:
                 'deposito', 'depósito', 'levantamento', 'saque', 'saldo', 'extrato',
                 'emprestimo', 'empréstimo', 'credito', 'crédito', 'juros', 'taxa',
                 'iban', 'swift', 'atm', 'multibanco', 'netplus', 'quiq', 'ussd',
-                'mobile banking', 'internet banking', 'homebank', 'agencia', 'agência'
+                'mobile banking', 'internet banking', 'homebank', 'agencia', 'agência',
+                'cheque', 'talao', 'talão', 'ordem', 'pagamento'
             ],
             'products': [
                 'poupanca', 'poupança', 'corrente', 'prazo', 'investimento',
                 'seguro', 'hipoteca', 'veiculo', 'veículo', 'pessoal', 'estudante',
-                'pensao', 'pensão', 'reforma', 'salario', 'salário'
+                'pensao', 'pensão', 'reforma', 'salario', 'salário', 'negocio', 'negócio',
+                'debito', 'débito', 'credito', 'crédito', 'visa', 'mastercard'
             ],
             'services': [
                 'abertura', 'encerramento', 'ativacao', 'ativação', 'bloqueio',
@@ -164,7 +166,8 @@ class BankingContentGuardrails:
         # Check for explicit banking context
         banking_contexts = [
             'banco', 'conta', 'cartão', 'transferencia', 'deposito',
-            'saldo', 'emprestimo', 'credito', 'iban', 'atm', 'taxa'
+            'saldo', 'emprestimo', 'credito', 'iban', 'atm', 'taxa',
+            'cheque', 'talão', 'pagamento'
         ]
         
         has_banking_context = any(context in text_lower for context in banking_contexts)
