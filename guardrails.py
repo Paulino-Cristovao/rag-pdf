@@ -42,41 +42,64 @@ class BankingContentGuardrails:
         # Banking-related keywords (Portuguese and English)
         self.banking_keywords = {
             'core_banking': [
+                # Portuguese terms
                 'banco', 'conta', 'cartão', 'cartao', 'transferencia', 'transferência',
                 'deposito', 'depósito', 'levantamento', 'saque', 'saldo', 'extrato',
                 'emprestimo', 'empréstimo', 'credito', 'crédito', 'juros', 'taxa',
                 'iban', 'swift', 'atm', 'multibanco', 'netplus', 'quiq', 'ussd',
                 'mobile banking', 'internet banking', 'homebank', 'agencia', 'agência',
-                'cheque', 'talao', 'talão', 'ordem', 'pagamento'
+                'cheque', 'talao', 'talão', 'ordem', 'pagamento',
+                # English terms
+                'bank', 'account', 'card', 'transfer', 'deposit', 'withdrawal', 
+                'balance', 'statement', 'loan', 'credit', 'interest', 'rate',
+                'check', 'cheque', 'payment', 'transaction', 'fee', 'charge',
+                'banking', 'branch', 'teller', 'cashier'
             ],
             'products': [
+                # Portuguese terms
                 'poupanca', 'poupança', 'corrente', 'prazo', 'investimento',
                 'seguro', 'hipoteca', 'veiculo', 'veículo', 'pessoal', 'estudante',
                 'pensao', 'pensão', 'reforma', 'salario', 'salário', 'negocio', 'negócio',
-                'debito', 'débito', 'credito', 'crédito', 'visa', 'mastercard'
+                'debito', 'débito', 'credito', 'crédito', 'visa', 'mastercard',
+                # English terms
+                'savings', 'current', 'checking', 'fixed', 'investment', 'insurance',
+                'mortgage', 'vehicle', 'personal', 'student', 'pension', 'retirement',
+                'salary', 'business', 'debit', 'credit', 'visa', 'mastercard'
             ],
             'services': [
+                # Portuguese terms
                 'abertura', 'encerramento', 'ativacao', 'ativação', 'bloqueio',
                 'desbloqueio', 'limite', 'comissao', 'comissão', 'tarifa',
-                'documentos', 'identificacao', 'identificação', 'nuit', 'bi'
+                'documentos', 'identificacao', 'identificação', 'nuit', 'bi',
+                # English terms
+                'opening', 'closing', 'activation', 'blocking', 'unblocking',
+                'limit', 'commission', 'fee', 'documents', 'identification', 'id'
             ],
-            'currencies': ['metical', 'mt', 'usd', 'eur', 'rand', 'zar', 'moeda'],
+            'currencies': ['metical', 'mt', 'mzn', 'usd', 'eur', 'rand', 'zar', 'moeda', 'currency', 'dollar', 'euro'],
             'banks': [
                 'standard bank', 'bcm', 'bci', 'bim', 'fnb', 'nedbank',
                 'banco terra', 'socremo', 'bancabc', 'ecobank', 'access bank'
             ]
         }
         
-        # Offensive/inappropriate content patterns
+        # Offensive/inappropriate content patterns (Portuguese and English)
         self.offensive_patterns = [
             # Profanity and insults (Portuguese)
             r'\b(merda|caralho|foda|puta|cu|porra|idiota|estupido|estúpido)\b',
-            # Discriminatory language
+            # Profanity and insults (English)
+            r'\b(shit|fuck|damn|stupid|idiot|moron|asshole|bitch)\b',
+            # Discriminatory language (Portuguese)
             r'\b(racista|xenofob|homofob|machista)\w*\b',
-            # Threats or violence
+            # Discriminatory language (English)
+            r'\b(racist|xenophob|homophob|sexist)\w*\b',
+            # Threats or violence (Portuguese)
             r'\b(matar|morte|violencia|violência|ameaca|ameaça|destruir)\b',
-            # Sexual content
-            r'\b(sexo|sexual|porn|nudez|intimo|íntimo)\b'
+            # Threats or violence (English)
+            r'\b(kill|death|violence|threat|destroy|harm)\b',
+            # Sexual content (Portuguese)
+            r'\b(sexo|sexual|porn|nudez|intimo|íntimo)\b',
+            # Sexual content (English)
+            r'\b(sex|sexual|porn|nude|intimate)\b'
         ]
         
         # Off-topic categories to block
@@ -163,11 +186,15 @@ class BankingContentGuardrails:
                 if keyword in text_lower:
                     banking_score += 1
         
-        # Check for explicit banking context
+        # Check for explicit banking context (Portuguese and English)
         banking_contexts = [
+            # Portuguese
             'banco', 'conta', 'cartão', 'transferencia', 'deposito',
             'saldo', 'emprestimo', 'credito', 'iban', 'atm', 'taxa',
-            'cheque', 'talão', 'pagamento'
+            'cheque', 'talão', 'pagamento',
+            # English
+            'bank', 'account', 'card', 'transfer', 'deposit',
+            'balance', 'loan', 'credit', 'payment', 'fee', 'check'
         ]
         
         has_banking_context = any(context in text_lower for context in banking_contexts)
@@ -371,34 +398,62 @@ class BankingContentGuardrails:
 
 
 def get_blocked_message(filter_result: FilterResult, reason: str, 
-                       suggested_alternative: Optional[str] = None) -> str:
-    """Generate user-friendly blocked message in Portuguese."""
+                       suggested_alternative: Optional[str] = None,
+                       language: str = 'pt') -> str:
+    """Generate user-friendly blocked message in Portuguese or English."""
     
-    base_messages = {
-        FilterResult.BLOCKED_OFFENSIVE: {
-            "title": "LINGUAGEM INADEQUADA",
-            "message": "Por favor, use uma linguagem respeitosa e profissional.",
-            "suggestion": "Reformule sua pergunta de forma educada."
-        },
-        FilterResult.BLOCKED_OFF_TOPIC: {
-            "title": "APENAS TEMAS BANCÁRIOS",
-            "message": "Este assistente responde apenas sobre serviços bancários de Moçambique.",
-            "suggestion": "Faça uma pergunta sobre contas, cartões, transferências ou outros serviços bancários."
-        },
-        FilterResult.BLOCKED_INAPPROPRIATE: {
-            "title": "CONTEÚDO INADEQUADO",
-            "message": "Não posso processar este tipo de solicitação.",
-            "suggestion": "Faça perguntas sobre procedimentos bancários públicos."
-        },
-        FilterResult.BLOCKED_SPAM: {
-            "title": "CONTEÚDO PROMOCIONAL",
-            "message": "Este não é um canal para conteúdo promocional.",
-            "suggestion": "Faça perguntas sobre informações bancárias específicas."
+    if language == 'en':
+        base_messages = {
+            FilterResult.BLOCKED_OFFENSIVE: {
+                "title": "INAPPROPRIATE LANGUAGE",
+                "message": "Please use respectful and professional language.",
+                "suggestion": "Rephrase your question politely."
+            },
+            FilterResult.BLOCKED_OFF_TOPIC: {
+                "title": "BANKING TOPICS ONLY",
+                "message": "This assistant only responds about banking services in Mozambique.",
+                "suggestion": "Ask a question about accounts, cards, transfers, or other banking services."
+            },
+            FilterResult.BLOCKED_INAPPROPRIATE: {
+                "title": "INAPPROPRIATE CONTENT",
+                "message": "I cannot process this type of request.",
+                "suggestion": "Ask questions about public banking procedures."
+            },
+            FilterResult.BLOCKED_SPAM: {
+                "title": "PROMOTIONAL CONTENT",
+                "message": "This is not a channel for promotional content.",
+                "suggestion": "Ask questions about specific banking information."
+            }
         }
-    }
+    else:
+        base_messages = {
+            FilterResult.BLOCKED_OFFENSIVE: {
+                "title": "LINGUAGEM INADEQUADA",
+                "message": "Por favor, use uma linguagem respeitosa e profissional.",
+                "suggestion": "Reformule sua pergunta de forma educada."
+            },
+            FilterResult.BLOCKED_OFF_TOPIC: {
+                "title": "APENAS TEMAS BANCÁRIOS",
+                "message": "Este assistente responde apenas sobre serviços bancários de Moçambique.",
+                "suggestion": "Faça uma pergunta sobre contas, cartões, transferências ou outros serviços bancários."
+            },
+            FilterResult.BLOCKED_INAPPROPRIATE: {
+                "title": "CONTEÚDO INADEQUADO",
+                "message": "Não posso processar este tipo de solicitação.",
+                "suggestion": "Faça perguntas sobre procedimentos bancários públicos."
+            },
+            FilterResult.BLOCKED_SPAM: {
+                "title": "CONTEÚDO PROMOCIONAL",
+                "message": "Este não é um canal para conteúdo promocional.",
+                "suggestion": "Faça perguntas sobre informações bancárias específicas."
+            }
+        }
     
     if filter_result not in base_messages:
-        return "Não posso processar esta pergunta. Tente uma pergunta sobre serviços bancários."
+        if language == 'en':
+            return "I cannot process this question. Try a question about banking services."
+        else:
+            return "Não posso processar esta pergunta. Tente uma pergunta sobre serviços bancários."
     
     msg_data = base_messages[filter_result]
     
@@ -409,9 +464,15 @@ def get_blocked_message(filter_result: FilterResult, reason: str,
 **Sugestão:** {msg_data['suggestion']}"""
     
     if suggested_alternative:
-        response += f"\n\n**Exemplo:** {suggested_alternative}"
+        if language == 'en':
+            response += f"\n\n**Example:** {suggested_alternative}"
+        else:
+            response += f"\n\n**Exemplo:** {suggested_alternative}"
     
-    response += "\n\n---\n*Para sua segurança, todas as perguntas são analisadas antes do processamento.*"
+    if language == 'en':
+        response += "\n\n---\n*For your security, all questions are analyzed before processing.*"
+    else:
+        response += "\n\n---\n*Para sua segurança, todas as perguntas são analisadas antes do processamento.*"
     
     return response
 

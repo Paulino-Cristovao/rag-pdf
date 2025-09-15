@@ -9,6 +9,7 @@ import os
 import re
 import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import gradio as gr
@@ -20,6 +21,8 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import Chroma
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langdetect import detect
+from langdetect.lang_detect_exception import LangDetectException
 
 from guardrails import BankingContentGuardrails, FilterResult, get_blocked_message
 
@@ -49,32 +52,64 @@ class RAGBankingAssistant:
         # Initialize content guardrails
         self.guardrails = BankingContentGuardrails()
         
-        # Enhanced prompt with confidence and compliance
-        self.prompt_template = PromptTemplate(
+        # Enhanced bilingual prompt template
+        self.prompt_template = self.create_bilingual_prompt()
+
+    def detect_language(self, text: str) -> str:
+        """Detect the language of the input text."""
+        try:
+            detected = detect(text)
+            # Map language codes to our supported languages
+            if detected in ['pt', 'pt-br', 'pt-pt']:
+                return 'pt'
+            elif detected in ['en', 'en-us', 'en-gb']:
+                return 'en'
+            else:
+                # Default to Portuguese for Mozambique context
+                return 'pt'
+        except (LangDetectException, Exception):
+            # Default to Portuguese if detection fails
+            return 'pt'
+
+    def create_bilingual_prompt(self) -> PromptTemplate:
+        """Create a bilingual prompt template that adapts based on question language."""
+        return PromptTemplate(
             input_variables=["context", "question"],
-            template="""
-Você é um assistente especializado em serviços bancários de Moçambique, focado em ajudar clientes com informações claras e precisas.
+            template="""You are a specialized assistant for banking services in Mozambique. You must respond in the same language as the question.
 
-INSTRUÇÕES CRÍTICAS:
-- Responda APENAS com informações dos documentos fornecidos
-- Se não encontrar a informação, diga claramente "Não encontrei esta informação nos documentos"
-- Use linguagem clara em português de Moçambique
-- Indique a confiança: ALTA se a informação está explícita, MÉDIA se inferida, BAIXA se incerta
-- Cite sempre as fontes (página e trecho)
-- Use Metical (MT) para valores monetários
+CRITICAL INSTRUCTIONS:
+- Answer ONLY with information from the provided documents
+- If information is not found, clearly state:
+  * Portuguese: "Não encontrei esta informação nos documentos"
+  * English: "I could not find this information in the documents"
+- **Response Language Rule:**
+  * If question is in Portuguese → respond in Mozambican Portuguese
+  * If question is in English → respond in English
+- Use clear, professional language
+- Indicate confidence: 
+  * Portuguese: ALTA/MÉDIA/BAIXA (HIGH/MEDIUM/LOW confidence)
+  * English: HIGH/MEDIUM/LOW (alta/média/baixa confiança)
+- Always cite sources (page and excerpt)
+- Use Metical (MT) for monetary values in Portuguese, MT/MZN for English
 
-FORMATO OBRIGATÓRIO:
-Resposta: [Explicação clara em 2-3 frases]
+MANDATORY FORMAT:
+**For Portuguese questions:**
+Resposta: [Clear explanation in 2-3 sentences]
 Confiança: [ALTA/MÉDIA/BAIXA]
-Fontes: [Página X: "trecho relevante"]
+Fontes: [Página X: "relevant excerpt"]
 
-CONTEXTO DOS DOCUMENTOS:
+**For English questions:**
+Answer: [Clear explanation in 2-3 sentences]
+Confidence: [HIGH/MEDIUM/LOW]
+Sources: [Page X: "relevant excerpt"]
+
+DOCUMENT CONTEXT:
 {context}
 
-PERGUNTA:
+QUESTION:
 {question}
 
-Resposta:"""
+Response:"""
         )
 
     def load_pdf(self, pdf_path: str) -> List[Document]:
@@ -85,6 +120,21 @@ Resposta:"""
         loader = PyPDFLoader(pdf_path)
         documents = loader.load()
 
+        # Add file source metadata
+        for doc in documents:
+            doc.metadata['source_file'] = os.path.basename(pdf_path)
+            # Detect language from filename or content
+            if '_en' in pdf_path.lower() or 'english' in pdf_path.lower():
+                doc.metadata['language'] = 'en'
+            elif '_pt' in pdf_path.lower() or 'portuguese' in pdf_path.lower():
+                doc.metadata['language'] = 'pt'
+            else:
+                # Try to detect from content
+                try:
+                    doc.metadata['language'] = self.detect_language(doc.page_content[:500])
+                except:
+                    doc.metadata['language'] = 'pt'  # Default
+
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=200,
@@ -93,6 +143,29 @@ Resposta:"""
 
         splits = text_splitter.split_documents(documents)
         return splits
+
+    def load_pdfs_from_directory(self, directory_path: str) -> List[Document]:
+        """Load all PDF files from a directory."""
+        if not os.path.exists(directory_path):
+            raise FileNotFoundError(f"Directory not found: {directory_path}")
+        
+        pdf_files = list(Path(directory_path).glob("*.pdf"))
+        if not pdf_files:
+            raise FileNotFoundError(f"No PDF files found in: {directory_path}")
+        
+        all_documents = []
+        for pdf_file in pdf_files:
+            print(f"Loading: {pdf_file.name}")
+            try:
+                documents = self.load_pdf(str(pdf_file))
+                all_documents.extend(documents)
+                print(f"✓ Loaded {len(documents)} chunks from {pdf_file.name}")
+            except Exception as e:
+                print(f"✗ Error loading {pdf_file.name}: {e}")
+                continue
+        
+        print(f"Total documents loaded: {len(all_documents)}")
+        return all_documents
 
     def create_vectorstore(self, documents: List[Document]) -> None:
         """Create vector database from documents."""
@@ -147,28 +220,42 @@ Resposta:"""
         
         return text
 
-    def extract_confidence(self, response_text: str) -> Tuple[str, str]:
-        """Extract confidence level from response."""
-        confidence_match = re.search(r'Confiança:\s*(ALTA|MÉDIA|BAIXA)', response_text)
-        confidence = confidence_match.group(1) if confidence_match else "MÉDIA"
-        
-        # Remove confidence line from response
-        cleaned_response = re.sub(r'Confiança:\s*(ALTA|MÉDIA|BAIXA)\s*', '', response_text)
+    def extract_confidence(self, response_text: str, language: str = 'pt') -> Tuple[str, str]:
+        """Extract confidence level from response (bilingual)."""
+        if language == 'en':
+            # English confidence patterns
+            confidence_match = re.search(r'Confidence:\s*(HIGH|MEDIUM|LOW)', response_text)
+            confidence = confidence_match.group(1) if confidence_match else "MEDIUM"
+            # Remove confidence line from response
+            cleaned_response = re.sub(r'Confidence:\s*(HIGH|MEDIUM|LOW)\s*', '', response_text)
+        else:
+            # Portuguese confidence patterns
+            confidence_match = re.search(r'Confiança:\s*(ALTA|MÉDIA|BAIXA)', response_text)
+            confidence = confidence_match.group(1) if confidence_match else "MÉDIA"
+            # Remove confidence line from response
+            cleaned_response = re.sub(r'Confiança:\s*(ALTA|MÉDIA|BAIXA)\s*', '', response_text)
         
         return cleaned_response, confidence
 
-    def format_sources_detailed(self, sources: List[Document]) -> str:
-        """Format sources with detailed information."""
+    def format_sources_detailed(self, sources: List[Document], language: str = 'pt') -> str:
+        """Format sources with detailed information (bilingual)."""
         if not sources:
-            return "Nenhuma fonte encontrada"
+            return "No sources found" if language == 'en' else "Nenhuma fonte encontrada"
         
         formatted_sources = []
         for i, doc in enumerate(sources, 1):
-            page = doc.metadata.get('page', 'Desconhecida')
+            page = doc.metadata.get('page', 'Unknown' if language == 'en' else 'Desconhecida')
+            source_file = doc.metadata.get('source_file', 'Unknown file' if language == 'en' else 'Arquivo desconhecido')
             content = doc.page_content[:200].replace('\n', ' ')
-            formatted_sources.append(
-                f"**Fonte {i}** (Página {page}):\n> {content}..."
-            )
+            
+            if language == 'en':
+                formatted_sources.append(
+                    f"**Source {i}** (Page {page}, File: {source_file}):\n> {content}..."
+                )
+            else:
+                formatted_sources.append(
+                    f"**Fonte {i}** (Página {page}, Arquivo: {source_file}):\n> {content}..."
+                )
         
         return "\n\n".join(formatted_sources)
 
@@ -180,6 +267,9 @@ Resposta:"""
         if not self.qa_chain:
             raise ValueError("QA chain not initialized")
         
+        # Detect question language
+        question_language = self.detect_language(question)
+        
         # First, validate the question through guardrails
         guardrail_result = self.guardrails.validate_question(question)
         
@@ -187,16 +277,18 @@ Resposta:"""
             blocked_message = get_blocked_message(
                 guardrail_result.result,
                 guardrail_result.reason,
-                guardrail_result.suggested_alternative
+                guardrail_result.suggested_alternative,
+                language=question_language
             )
             return {
                 'answer': blocked_message,
-                'confidence': 'BLOQUEADA',
+                'confidence': 'BLOCKED' if question_language == 'en' else 'BLOQUEADA',
                 'sources': [],
                 'has_info': False,
                 'answer_type': 'blocked',
                 'filter_result': guardrail_result.result.value,
-                'blocked_reason': guardrail_result.reason
+                'blocked_reason': guardrail_result.reason,
+                'language': question_language
             }
         
         # Update temperature if changed
@@ -211,14 +303,20 @@ Resposta:"""
             answer = response['result']
             sources = response['source_documents']
             
-            # Extract confidence
-            cleaned_answer, confidence = self.extract_confidence(answer)
+            # Extract confidence based on language
+            cleaned_answer, confidence = self.extract_confidence(answer, question_language)
             
-            # Check if answer indicates no information found
-            no_info_indicators = [
-                "não encontrei", "não tenho", "não consta", 
-                "não está", "não há informação"
-            ]
+            # Check if answer indicates no information found (bilingual)
+            if question_language == 'en':
+                no_info_indicators = [
+                    "could not find", "i could not find", "not found", 
+                    "no information", "not available"
+                ]
+            else:
+                no_info_indicators = [
+                    "não encontrei", "não tenho", "não consta", 
+                    "não está", "não há informação"
+                ]
             
             has_info = not any(indicator in cleaned_answer.lower() 
                              for indicator in no_info_indicators)
@@ -228,16 +326,21 @@ Resposta:"""
                 'confidence': confidence,
                 'sources': sources,
                 'has_info': has_info,
-                'answer_type': 'supported' if has_info else 'not_found'
+                'answer_type': 'supported' if has_info else 'not_found',
+                'language': question_language
             }
             
         except Exception as e:
+            error_message = f"Error processing the question: {str(e)}" if question_language == 'en' else f"Erro ao processar a pergunta: {str(e)}"
+            error_confidence = 'LOW' if question_language == 'en' else 'BAIXA'
+            
             return {
-                'answer': f"Erro ao processar a pergunta: {str(e)}",
-                'confidence': 'BAIXA',
+                'answer': error_message,
+                'confidence': error_confidence,
                 'sources': [],
                 'has_info': False,
-                'answer_type': 'error'
+                'answer_type': 'error',
+                'language': question_language
             }
 
     def run_interactive_session(self) -> None:
@@ -277,17 +380,30 @@ Resposta:"""
                 message, force_docs, mask_pii, temperature
             )
             
-            # Create confidence badge
-            confidence_color = {
-                'ALTA': '[ALTA]', 'MÉDIA': '[MÉDIA]', 'BAIXA': '[BAIXA]', 'BLOQUEADA': '[BLOQUEADA]'
-            }
+            # Get language from result
+            language = result.get('language', 'pt')
             
-            answer_type_badge = {
-                'supported': 'Resposta baseada em documentos',
-                'not_found': 'Informação não encontrada nos documentos',
-                'error': 'Erro no processamento',
-                'blocked': 'Pergunta filtrada pelo sistema de moderação'
-            }
+            # Create bilingual confidence badge
+            if language == 'en':
+                confidence_color = {
+                    'HIGH': '[HIGH]', 'MEDIUM': '[MEDIUM]', 'LOW': '[LOW]', 'BLOCKED': '[BLOCKED]'
+                }
+                answer_type_badge = {
+                    'supported': 'Document-based response',
+                    'not_found': 'Information not found in documents',
+                    'error': 'Processing error',
+                    'blocked': 'Question filtered by moderation system'
+                }
+            else:
+                confidence_color = {
+                    'ALTA': '[ALTA]', 'MÉDIA': '[MÉDIA]', 'BAIXA': '[BAIXA]', 'BLOQUEADA': '[BLOQUEADA]'
+                }
+                answer_type_badge = {
+                    'supported': 'Resposta baseada em documentos',
+                    'not_found': 'Informação não encontrada nos documentos',
+                    'error': 'Erro no processamento',
+                    'blocked': 'Pergunta filtrada pelo sistema de moderação'
+                }
             
             # Format response based on type
             if result['answer_type'] == 'blocked':
@@ -295,9 +411,15 @@ Resposta:"""
                 formatted_response = result['answer']
             else:
                 # Format sources for normal responses
-                sources_md = self.format_sources_detailed(result['sources'])
-                badge = answer_type_badge.get(result['answer_type'], 'Resposta incerta')
-                confidence_indicator = f"{confidence_color.get(result['confidence'], '[DESCONHECIDA]')} Confiança: {result['confidence']}"
+                sources_md = self.format_sources_detailed(result['sources'], language)
+                badge = answer_type_badge.get(result['answer_type'], 'Uncertain response' if language == 'en' else 'Resposta incerta')
+                
+                if language == 'en':
+                    confidence_indicator = f"{confidence_color.get(result['confidence'], '[UNKNOWN]')} Confidence: {result['confidence']}"
+                    sources_label = f"View sources ({len(result['sources'])} documents)"
+                else:
+                    confidence_indicator = f"{confidence_color.get(result['confidence'], '[DESCONHECIDA]')} Confiança: {result['confidence']}"
+                    sources_label = f"Ver fontes ({len(result['sources'])} documentos)"
                 
                 formatted_response = f"""{result['answer']}
 
@@ -305,7 +427,7 @@ Resposta:"""
 {badge} · {confidence_indicator}
 
 <details>
-<summary>Ver fontes ({len(result['sources'])} documentos)</summary>
+<summary>{sources_label}</summary>
 
 {sources_md}
 
@@ -498,23 +620,39 @@ Resposta:"""
         )
 
 
-def setup_application(pdf_path: str) -> RAGBankingAssistant:
-    """Setup the RAG application with PDF."""
+def setup_application(path: str) -> RAGBankingAssistant:
+    """Setup the RAG application with PDF file or directory."""
     print("Iniciando Assistente Bancário de Moçambique...")
+    print("Starting Mozambique Banking Assistant...")
     
     app = RAGBankingAssistant()
     
-    print(f"Carregando PDF: {pdf_path}")
-    documents = app.load_pdf(pdf_path)
+    # Check if path is a file or directory
+    if os.path.isfile(path):
+        print(f"Carregando PDF: {path}")
+        print(f"Loading PDF: {path}")
+        documents = app.load_pdf(path)
+    elif os.path.isdir(path):
+        print(f"Carregando PDFs do diretório: {path}")
+        print(f"Loading PDFs from directory: {path}")
+        documents = app.load_pdfs_from_directory(path)
+    else:
+        raise FileNotFoundError(f"Path not found: {path}")
+    
     print(f"Carregados {len(documents)} fragmentos do documento")
+    print(f"Loaded {len(documents)} document chunks")
     
     print("Criando base de dados vetorial...")
+    print("Creating vector database...")
     app.create_vectorstore(documents)
     print("Base de dados criada")
+    print("Database created")
     
     print("Configurando sistema de perguntas e respostas...")
+    print("Setting up question-answer system...")
     app.setup_qa_chain()
     print("Sistema pronto")
+    print("System ready")
     
     return app
 
@@ -522,10 +660,10 @@ def setup_application(pdf_path: str) -> RAGBankingAssistant:
 def main() -> int:
     """Main function."""
     parser = argparse.ArgumentParser(
-        description="Assistente Bancário RAG para Moçambique"
+        description="Assistente Bancário RAG para Moçambique / Mozambique Banking RAG Assistant"
     )
     parser.add_argument(
-        "--pdf", required=True, help="Caminho para o arquivo PDF"
+        "--pdf", required=True, help="Caminho para arquivo PDF ou diretório com PDFs / Path to PDF file or directory with PDFs"
     )
     parser.add_argument(
         "--interface", 
