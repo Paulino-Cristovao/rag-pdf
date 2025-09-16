@@ -370,82 +370,187 @@ Response:"""
                 print(f"Erro: {e}\n")
 
     def create_gradio_interface(self) -> gr.Blocks:
-        """Create Gradio web interface."""
+        """Create enhanced Gradio web interface with improved UX."""
         
-        def chat_fn(history, message, force_docs, mask_pii, temperature):
+        ACCENT = "#F05A16"  # Orange accent color
+        
+        def chat_fn(history, message, force_docs, mask_pii, temperature, language, bank_selector):
             if not message.strip():
-                return history, ""
+                return history, "", ""
             
             result = self.query_with_confidence(
                 message, force_docs, mask_pii, temperature
             )
             
-            # Get language from result
-            language = result.get('language', 'pt')
+            # Get detected language
+            detected_lang = result.get('language', 'pt')
             
-            # Create bilingual confidence badge
-            if language == 'en':
-                confidence_color = {
-                    'HIGH': '[HIGH]', 'MEDIUM': '[MEDIUM]', 'LOW': '[LOW]', 'BLOCKED': '[BLOCKED]'
-                }
-                answer_type_badge = {
-                    'supported': 'Document-based response',
-                    'not_found': 'Information not found in documents',
-                    'error': 'Processing error',
-                    'blocked': 'Question filtered by moderation system'
-                }
+            # Create confidence badge
+            if detected_lang == 'en':
+                conf_badge = f"<span class='confidence-badge confidence-{result['confidence'].lower()}'>Confidence: {result['confidence']}</span>"
             else:
-                confidence_color = {
-                    'ALTA': '[ALTA]', 'MÉDIA': '[MÉDIA]', 'BAIXA': '[BAIXA]', 'BLOQUEADA': '[BLOQUEADA]'
-                }
-                answer_type_badge = {
-                    'supported': 'Resposta baseada em documentos',
-                    'not_found': 'Informação não encontrada nos documentos',
-                    'error': 'Erro no processamento',
-                    'blocked': 'Pergunta filtrada pelo sistema de moderação'
-                }
+                conf_badge = f"<span class='confidence-badge confidence-{result['confidence'].lower()}'>Confiança: {result['confidence']}</span>"
             
-            # Format response based on type
+            # Handle blocked responses
             if result['answer_type'] == 'blocked':
-                # For blocked messages, don't show sources or confidence details
-                formatted_response = result['answer']
-            else:
-                # Format sources for normal responses
-                sources_md = self.format_sources_detailed(result['sources'], language)
-                badge = answer_type_badge.get(result['answer_type'], 'Uncertain response' if language == 'en' else 'Resposta incerta')
+                formatted_response = f"<div class='blocked-message'>{result['answer']}</div>"
+                sources_html = "<div class='no-sources'>Sem fontes disponíveis / No sources available</div>"
+                history.append([message, formatted_response])
+                return history, "", sources_html
+            
+            # Format sources as chips
+            sources_chips = []
+            for i, doc in enumerate(result['sources'], 1):
+                page = doc.metadata.get('page', '?')
+                source_file = doc.metadata.get('source_file', 'Unknown')
+                content_snippet = doc.page_content[:100].replace('\n', ' ')
                 
-                if language == 'en':
-                    confidence_indicator = f"{confidence_color.get(result['confidence'], '[UNKNOWN]')} Confidence: {result['confidence']}"
-                    sources_label = f"View sources ({len(result['sources'])} documents)"
-                else:
-                    confidence_indicator = f"{confidence_color.get(result['confidence'], '[DESCONHECIDA]')} Confiança: {result['confidence']}"
-                    sources_label = f"Ver fontes ({len(result['sources'])} documentos)"
-                
-                formatted_response = f"""{result['answer']}
-
----
-{badge} · {confidence_indicator}
-
-<details>
-<summary>{sources_label}</summary>
-
-{sources_md}
-
-</details>"""
+                chip_html = f"""
+                <div class='source-chip' title='{content_snippet}...'>
+                    <span class='source-info'>{source_file} - Pág. {page}</span>
+                    <button class='copy-quote-btn' onclick="navigator.clipboard.writeText('{content_snippet}...')">📋</button>
+                </div>
+                """
+                sources_chips.append(chip_html)
+            
+            no_sources_div = '<div class="no-sources">Sem fontes / No sources</div>'
+            sources_html = f"<div class='sources-container'>{''.join(sources_chips) if sources_chips else no_sources_div}</div>"
+            
+            # Format response with inline confidence
+            formatted_response = f"""
+            <div class='response-container'>
+                <div class='response-header'>{conf_badge}</div>
+                <div class='response-content'>{result['answer']}</div>
+            </div>
+            """
             
             history.append([message, formatted_response])
-            return history, ""
+            return history, "", sources_html
         
         def clear_chat():
             """Clear the chat history."""
-            return [], ""
+            return [], "", "<div class='no-sources'>Sem fontes ainda / No sources yet</div>"
         
-        def feedback_fn(feedback_type, comment):
+        def submit_feedback(stars, tags, last_message):
+            """Submit user feedback with 5-star rating and tags."""
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            # Here you would log to your analytics system
-            return f"Obrigado pelo feedback! Registado em {timestamp}"
+            # TODO: Log to analytics system
+            feedback_data = {
+                'timestamp': timestamp,
+                'rating': stars,
+                'tags': tags,
+                'message': last_message
+            }
+            print(f"Feedback logged: {feedback_data}")  # For now, just print
+            return "✅ Obrigado! Feedback registado / Thank you! Feedback recorded"
         
-        # Create interface with dark orange theme
+        def fill_intent(intent_text):
+            """Fill input with intent text."""
+            return intent_text
+        
+        def export_chat(history):
+            """Export chat to text format."""
+            if not history:
+                return "Sem conversas para exportar / No conversations to export"
+            
+            export_text = f"# Conversa Assistente Bancário - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            for i, (user_msg, bot_response) in enumerate(history, 1):
+                export_text += f"## Pergunta {i}:\n{user_msg}\n\n## Resposta {i}:\n{bot_response}\n\n---\n\n"
+            
+            return export_text
+        
+        # Enhanced CSS styling
+        custom_css = f"""
+        :root {{
+            --accent: {ACCENT};
+        }}
+        .gradio-container {{
+            max-width: 1200px !important;
+        }}
+        .btn-accent {{
+            background: var(--accent) !important; 
+            border-color: var(--accent) !important;
+            color: white !important;
+        }}
+        .confidence-badge {{
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }}
+        .confidence-alta, .confidence-high {{
+            background: #10B981;
+            color: white;
+        }}
+        .confidence-média, .confidence-medium {{
+            background: #F59E0B;
+            color: white;
+        }}
+        .confidence-baixa, .confidence-low {{
+            background: #EF4444;
+            color: white;
+        }}
+        .source-chip {{
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border: 1px solid #374151;
+            border-radius: 9999px;
+            margin: 0.25rem;
+            background: #F3F4F6;
+            font-size: 0.8rem;
+        }}
+        .copy-quote-btn {{
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }}
+        .sources-container {{
+            margin-top: 0.5rem;
+        }}
+        .no-sources {{
+            color: #6B7280;
+            font-style: italic;
+            padding: 1rem;
+        }}
+        .blocked-message {{
+            background: #FEE2E2;
+            border: 1px solid #FECACA;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            color: #991B1B;
+        }}
+        .response-container {{
+            margin: 0.5rem 0;
+        }}
+        .intent-chip {{
+            margin: 0.25rem;
+            font-size: 0.85rem;
+        }}
+        .footer {{
+            font-size: 0.8rem;
+            color: #6B7280;
+            border-top: 1px solid #E5E7EB;
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }}
+        .pii-warning {{
+            background: #FEF3C7;
+            border: 1px solid #F59E0B;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            font-size: 0.8rem;
+            color: #92400E;
+        }}
+        """
+        
+        # Create interface with enhanced theme
         custom_theme = gr.themes.Soft(
             primary_hue=gr.themes.colors.orange,
             secondary_hue=gr.themes.colors.amber,
@@ -454,162 +559,211 @@ Response:"""
         
         with gr.Blocks(
             title="Assistente Bancário de Moçambique",
-            theme=custom_theme
+            theme=custom_theme,
+            css=custom_css
         ) as interface:
             
             # Header
             gr.Markdown("""
-            # Assistente Bancário de Moçambique
-            ### Sistema Completo com Guardrails e Conformidade | Powered by GPT-4
+            # 🏦 Assistente Bancário de Moçambique
+            ### Sistema Inteligente com Guardrails e Conformidade | Powered by GPT-4
             
-            Faça perguntas sobre produtos bancários, procedimentos e regulamentações em Moçambique.
-            Ask questions about banking products, procedures and regulations in Mozambique.
-            
-            **Sistema de Moderação Ativo:** Filtra automaticamente conteúdo inadequado e perguntas fora do âmbito bancário.
-            **Active Moderation System:** Automatically filters inappropriate content and off-topic questions.
+            Faça perguntas sobre produtos bancários, procedimentos e regulamentações em Moçambique.  
+            *Ask questions about banking products, procedures and regulations in Mozambique.*
             """)
             
-            # Settings row
+            # Top controls row
             with gr.Row():
-                force_docs = gr.Checkbox(
-                    value=True, 
-                    label="Responder apenas com base nos documentos"
+                language_selector = gr.Radio(
+                    ["Português", "English"], 
+                    value="Português", 
+                    label="🌍 Idioma / Language",
+                    info="Selecione o idioma preferido / Select preferred language"
                 )
-                mask_pii = gr.Checkbox(
-                    value=True, 
-                    label="Proteger dados sensíveis (PII)"
-                )
-                temperature = gr.Slider(
-                    0.0, 1.0, value=0.2, step=0.1,
-                    label="Criatividade (0=conservador, 1=criativo)"
+                bank_selector = gr.Dropdown(
+                    ["Standard Bank", "BCI", "Millennium BIM", "All Banks"], 
+                    value="Standard Bank",
+                    label="🏛️ Banco / Bank",
+                    info="Escolha o banco específico / Choose specific bank"
                 )
             
-            # Chat interface
-            chatbot = gr.Chatbot(
-                height=500,
-                show_copy_button=True,
-                show_share_button=False,
-                bubble_full_width=False,
-                label="Conversa"
-            )
-            
+            # Intent chips - Quick actions
+            gr.Markdown("### 🚀 Ações Rápidas / Quick Actions")
             with gr.Row():
-                msg_input = gr.Textbox(
-                    placeholder="Digite sua pergunta sobre serviços bancários...",
-                    label="Sua pergunta",
-                    scale=4,
-                    autofocus=True
-                )
-                with gr.Column(scale=1):
-                    send_btn = gr.Button("Enviar", variant="primary", size="lg")
-                    clear_btn = gr.Button("Limpar Chat", variant="secondary", size="lg")
+                intent_buttons = [
+                    gr.Button("💳 Abrir conta", elem_classes=["intent-chip"], size="sm"),
+                    gr.Button("💸 Taxas transferências", elem_classes=["intent-chip"], size="sm"),
+                    gr.Button("📱 USSD códigos", elem_classes=["intent-chip"], size="sm"),
+                    gr.Button("🏧 Limites ATM", elem_classes=["intent-chip"], size="sm"),
+                    gr.Button("📞 Mobile banking", elem_classes=["intent-chip"], size="sm"),
+                    gr.Button("🔒 Segurança cartão", elem_classes=["intent-chip"], size="sm")
+                ]
             
-            # Example buttons by category
-            gr.Markdown("### Exemplos por categoria:")
-            
+            # Main layout: Chat + Sources panel
             with gr.Row():
-                with gr.Column():
-                    gr.Markdown("**Contas e Cartões**")
-                    ex_conta = gr.Button("Como abrir conta corrente?", size="sm")
-                    ex_cartao = gr.Button("Taxas do cartão de débito?", size="sm")
-                
-                with gr.Column():
-                    gr.Markdown("**Transferências**")
-                    ex_transfer = gr.Button("Taxas de transferências?", size="sm")
-                    ex_limite = gr.Button("Limites de transferência?", size="sm")
-                
-                with gr.Column():
-                    gr.Markdown("**Canais Digitais**")
-                    ex_mobile = gr.Button("Como usar mobile banking?", size="sm")
-                    ex_ussd = gr.Button("Códigos USSD disponíveis?", size="sm")
-            
-            # Feedback and actions section
-            with gr.Row():
+                # Left column - Chat
                 with gr.Column(scale=3):
+                    chatbot = gr.Chatbot(
+                        height=450,
+                        show_copy_button=True,
+                        show_share_button=False,
+                        bubble_full_width=False,
+                        label="💬 Conversa / Conversation",
+                        elem_id="main-chatbot",
+                        type="tuples"  # Explicitly specify format
+                    )
+                    
+                    # PII Warning
+                    gr.HTML("""
+                    <div class='pii-warning'>
+                        ⚠️ <strong>Aviso de Privacidade:</strong> Não partilhe números completos de NIB, NUIT, ou dados pessoais sensíveis.<br>
+                        <em>Privacy Warning: Do not share complete NIB, NUIT numbers, or sensitive personal data.</em>
+                    </div>
+                    """)
+                    
+                    # Input area with controls
                     with gr.Row():
-                        feedback_good = gr.Button("Útil", size="sm")
-                        feedback_bad = gr.Button("Não útil", size="sm")
-                        feedback_unclear = gr.Button("Confuso", size="sm")
+                        msg_input = gr.Textbox(
+                            placeholder="Digite sua pergunta sobre serviços bancários... / Ask about banking services...",
+                            label="",
+                            scale=5,
+                            autofocus=True,
+                            show_label=False
+                        )
+                        
+                    # Input controls row  
+                    with gr.Row():
+                        send_btn = gr.Button("📤 Enviar", variant="primary", elem_classes=["btn-accent"], scale=1)
+                        force_docs = gr.Checkbox(
+                            value=True, 
+                            label="📚 Só documentos",
+                            info="Responder apenas com base nos documentos",
+                            scale=1
+                        )
+                        mask_pii = gr.Checkbox(
+                            value=True, 
+                            label="🔒 Proteger PII",
+                            info="Mascarar dados sensíveis automaticamente",
+                            scale=1
+                        )
+                        temperature = gr.Slider(
+                            0.0, 1.0, value=0.2, step=0.1,
+                            label="🎯 Criatividade",
+                            info="0=conservador, 1=criativo",
+                            scale=1
+                        )
+                
+                # Right column - Sources and utilities
+                with gr.Column(scale=2):
+                    gr.Markdown("### 📄 Documentos & Fontes")
+                    sources_display = gr.HTML("<div class='no-sources'>Sem fontes ainda / No sources yet</div>")
+                    
+                    # Admin upload section
+                    with gr.Accordion("🔧 Admin: Adicionar Documentos", open=False):
+                        file_upload = gr.File(
+                            label="Carregar PDFs adicionais / Upload additional PDFs",
+                            file_count="multiple",
+                            file_types=[".pdf"]
+                        )
+                        corpus_status = gr.Markdown("**Corpus ativo:** Standard Bank PT + EN")
+                        
+            # Conversation utilities
+            with gr.Row():
+                clear_btn = gr.Button("🗑️ Limpar Chat", variant="secondary")
+                export_btn = gr.Button("📑 Exportar PDF", variant="secondary") 
+                regen_btn = gr.Button("🔄 Regenerar", variant="secondary")
+                sources_btn = gr.Button("🔗 Mostrar cadeia fontes", variant="secondary")
+            
+            # Enhanced 5-star feedback system
+            gr.Markdown("### ⭐ Avalie esta resposta / Rate this response")
+            with gr.Row():
+                with gr.Column(scale=2):
+                    rating_stars = gr.Slider(
+                        1, 5, value=5, step=1,
+                        label="Classificação / Rating",
+                        info="1=Muito ruim, 5=Excelente"
+                    )
+                with gr.Column(scale=3):
+                    feedback_tags = gr.CheckboxGroup(
+                        choices=["Desatualizado", "Não encontrado", "Ambíguo", "Lento", "Impreciso"],
+                        label="Problemas (opcional) / Issues (optional)",
+                        info="Marque os problemas encontrados"
+                    )
                 with gr.Column(scale=1):
-                    gr.Markdown("")  # Spacer
+                    submit_feedback_btn = gr.Button("📝 Enviar Feedback", variant="secondary")
             
-            feedback_output = gr.Textbox(label="Feedback", visible=False)
+            feedback_message = gr.Markdown(visible=False)
+            last_user_message = gr.State("")  # Store last message for feedback context
             
-            # Footer with compliance info and developer credit
-            gr.Markdown(f"""
-            ---
-            **Aviso Legal:** Esta é informação geral. Confirme sempre com o seu banco.
-            
-            **Última atualização:** {self.knowledge_base_date} | 
-            **Privacidade:** Dados sensíveis são automaticamente protegidos
-            
-            ---
-            **Desenvolvido por:** [Paulino Cristovao](https://github.com/Paulino-Cristovao) | **Developed by:** [Paulino Cristovao](https://github.com/Paulino-Cristovao)
+            # Footer
+            gr.HTML(f"""
+            <div class='footer'>
+                <strong>⚖️ Aviso Legal:</strong> Esta é informação geral. Confirme sempre com o seu banco.<br>
+                <strong>📅 Última atualização:</strong> {self.knowledge_base_date} | 
+                <strong>🔒 Privacidade:</strong> Dados sensíveis são automaticamente protegidos<br><br>
+                <strong>👨‍💻 Desenvolvido por:</strong> <a href='https://github.com/Paulino-Cristovao' target='_blank'>Paulino Cristovao</a> | 
+                <strong>Developed by:</strong> <a href='https://github.com/Paulino-Cristovao' target='_blank'>Paulino Cristovao</a>
+            </div>
             """)
             
-            # Event handlers
+            # Enhanced event handlers
+            
+            # Main chat functionality
+            def handle_send_message(history, message, force_docs, mask_pii, temperature, language, bank):
+                """Handle sending a message and store it for feedback context."""
+                updated_history, _, sources_html = chat_fn(history, message, force_docs, mask_pii, temperature, language, bank)
+                return updated_history, "", sources_html, message  # Store last message
+            
             send_btn.click(
-                chat_fn,
-                inputs=[chatbot, msg_input, force_docs, mask_pii, temperature],
-                outputs=[chatbot, msg_input]
+                handle_send_message,
+                inputs=[chatbot, msg_input, force_docs, mask_pii, temperature, language_selector, bank_selector],
+                outputs=[chatbot, msg_input, sources_display, last_user_message]
             )
             
             msg_input.submit(
-                chat_fn,
-                inputs=[chatbot, msg_input, force_docs, mask_pii, temperature],
-                outputs=[chatbot, msg_input]
+                handle_send_message,
+                inputs=[chatbot, msg_input, force_docs, mask_pii, temperature, language_selector, bank_selector],
+                outputs=[chatbot, msg_input, sources_display, last_user_message]
             )
             
-            # Clear button handler
+            # Clear chat
             clear_btn.click(
                 clear_chat,
-                inputs=[],
-                outputs=[chatbot, msg_input]
+                outputs=[chatbot, msg_input, sources_display]
             )
             
-            # Example button handlers
-            examples = [
-                (ex_conta, "Como posso abrir uma conta corrente?"),
-                (ex_cartao, "Quais são as taxas do cartão de débito?"),
-                (ex_transfer, "Quais são as taxas para transferências bancárias?"),
-                (ex_limite, "Quais são os limites de transferência?"),
-                (ex_mobile, "Como usar o mobile banking?"),
-                (ex_ussd, "Que códigos USSD estão disponíveis?")
+            # Intent button handlers
+            intent_questions = [
+                "Como posso abrir uma conta corrente?",
+                "Quais são as taxas para transferências bancárias?", 
+                "Que códigos USSD estão disponíveis?",
+                "Quais são os limites de levantamento no ATM?",
+                "Como usar o mobile banking?",
+                "Como posso proteger o meu cartão contra fraudes?"
             ]
             
-            for button, question in examples:
+            for i, button in enumerate(intent_buttons):
+                question = intent_questions[i]
                 button.click(
                     lambda q=question: q,
                     outputs=msg_input
-                ).then(
-                    chat_fn,
-                    inputs=[chatbot, msg_input, force_docs, mask_pii, temperature],
-                    outputs=[chatbot, msg_input]
                 )
             
-            # Feedback handlers
-            feedback_good.click(
-                lambda: feedback_fn("positive", ""),
-                outputs=feedback_output
-            ).then(
-                lambda: gr.update(visible=True),
-                outputs=feedback_output
+            # Export chat functionality
+            export_btn.click(
+                export_chat,
+                inputs=[chatbot],
+                outputs=gr.Textbox(label="Chat Exportado", visible=True)
             )
             
-            feedback_bad.click(
-                lambda: feedback_fn("negative", ""),
-                outputs=feedback_output
+            # Enhanced feedback system
+            submit_feedback_btn.click(
+                submit_feedback,
+                inputs=[rating_stars, feedback_tags, last_user_message],
+                outputs=feedback_message
             ).then(
                 lambda: gr.update(visible=True),
-                outputs=feedback_output
-            )
-            
-            feedback_unclear.click(
-                lambda: feedback_fn("unclear", ""),
-                outputs=feedback_output
-            ).then(
-                lambda: gr.update(visible=True),
-                outputs=feedback_output
+                outputs=feedback_message
             )
         
         return interface
