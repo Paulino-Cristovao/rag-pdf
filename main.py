@@ -43,7 +43,7 @@ class RAGBankingAssistant:
         self.embeddings: OpenAIEmbeddings = OpenAIEmbeddings()
         self.llm: ChatOpenAI = ChatOpenAI(
             temperature=0.2,
-            model_name="gpt-3.5-turbo",
+            model_name="gpt-4",
         )
         self.vectorstore: Optional[Chroma] = None
         self.qa_chain: Optional[RetrievalQA] = None
@@ -460,11 +460,13 @@ Response:"""
             # Header
             gr.Markdown("""
             # Assistente Bancário de Moçambique
-            ### Sistema Completo com Guardrails e Conformidade
+            ### Sistema Completo com Guardrails e Conformidade | Powered by GPT-4
             
             Faça perguntas sobre produtos bancários, procedimentos e regulamentações em Moçambique.
+            Ask questions about banking products, procedures and regulations in Mozambique.
             
             **Sistema de Moderação Ativo:** Filtra automaticamente conteúdo inadequado e perguntas fora do âmbito bancário.
+            **Active Moderation System:** Automatically filters inappropriate content and off-topic questions.
             """)
             
             # Settings row
