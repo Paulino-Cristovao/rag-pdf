@@ -533,13 +533,16 @@ Response:"""
             
             feedback_output = gr.Textbox(label="Feedback", visible=False)
             
-            # Footer with compliance info
+            # Footer with compliance info and developer credit
             gr.Markdown(f"""
             ---
             **Aviso Legal:** Esta é informação geral. Confirme sempre com o seu banco.
             
             **Última atualização:** {self.knowledge_base_date} | 
             **Privacidade:** Dados sensíveis são automaticamente protegidos
+            
+            ---
+            **Desenvolvido por:** [Paulino Cristovao](https://github.com/Paulino-Cristovao) | **Developed by:** [Paulino Cristovao](https://github.com/Paulino-Cristovao)
             """)
             
             # Event handlers
