@@ -460,7 +460,7 @@ Response:"""
             # Header
             gr.Markdown("""
             # Assistente Bancário de Moçambique
-            ### Sistema Completo com Guardrails e Conformidade | Powered by GPT-4
+            ### Sistema Completo com Guardrails e Conformidade
             
             Faça perguntas sobre produtos bancários, procedimentos e regulamentações em Moçambique.
             Ask questions about banking products, procedures and regulations in Mozambique.
@@ -536,16 +536,21 @@ Response:"""
             feedback_output = gr.Textbox(label="Feedback", visible=False)
             
             # Footer with compliance info and developer credit
-            gr.Markdown(f"""
-            ---
-            **Aviso Legal:** Esta é informação geral. Confirme sempre com o seu banco.
-            
-            **Última atualização:** {self.knowledge_base_date} | 
-            **Privacidade:** Dados sensíveis são automaticamente protegidos
-            
-            ---
-            **Desenvolvido por:** [Paulino Cristovao](https://github.com/Paulino-Cristovao) | **Developed by:** [Paulino Cristovao](https://github.com/Paulino-Cristovao)
-            """)
+            with gr.Row():
+                with gr.Column(scale=3):
+                    gr.Markdown(f"""
+                    ---
+                    **Aviso Legal:** Esta é informação geral. Confirme sempre com o seu banco.
+                    
+                    **Última atualização:** {self.knowledge_base_date} | 
+                    **Privacidade:** Dados sensíveis são automaticamente protegidos
+                    """)
+                with gr.Column(scale=1):
+                    gr.Markdown("""
+                    ---
+                    **Desenvolvido por:** [Paulino Cristovao](https://github.com/Paulino-Cristovao)  
+                    **Developed by:** [Paulino Cristovao](https://github.com/Paulino-Cristovao)
+                    """)
             
             # Event handlers
             send_btn.click(
