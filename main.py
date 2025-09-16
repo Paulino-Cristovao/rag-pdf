@@ -79,13 +79,14 @@ class RAGBankingAssistant:
 
 CRITICAL INSTRUCTIONS:
 - Answer ONLY with information from the provided documents
-- If information is not found, clearly state:
-  * Portuguese: "Não encontrei esta informação nos documentos"
-  * English: "I could not find this information in the documents"
+- If information is not found, provide escalation information:
+  * Portuguese: "Não encontrei esta informação nos documentos. Para mais detalhes, contacte o atendimento ao cliente ou envie email para: customersupport@standard.bank.com"
+  * English: "I could not find this information in the documents. For more details, please contact customer support or send email to: customersupport@standard.bank.com"
 - **Response Language Rule:**
   * If question is in Portuguese → respond in Mozambican Portuguese
   * If question is in English → respond in English
 - Use clear, professional language
+- Always be conservative and accurate
 - Indicate confidence: 
   * Portuguese: ALTA/MÉDIA/BAIXA (HIGH/MEDIUM/LOW confidence)
   * English: HIGH/MEDIUM/LOW (alta/média/baixa confiança)
@@ -310,12 +311,12 @@ Response:"""
             if question_language == 'en':
                 no_info_indicators = [
                     "could not find", "i could not find", "not found", 
-                    "no information", "not available"
+                    "no information", "not available", "contact customer support"
                 ]
             else:
                 no_info_indicators = [
                     "não encontrei", "não tenho", "não consta", 
-                    "não está", "não há informação"
+                    "não está", "não há informação", "contacte o atendimento"
                 ]
             
             has_info = not any(indicator in cleaned_answer.lower() 
@@ -372,12 +373,13 @@ Response:"""
     def create_gradio_interface(self) -> gr.Blocks:
         """Create Gradio web interface."""
         
-        def chat_fn(history, message, force_docs, mask_pii, temperature):
+        def chat_fn(history, message):
             if not message.strip():
                 return history, ""
             
+            # Always use conservative, document-based settings for banking
             result = self.query_with_confidence(
-                message, force_docs, mask_pii, temperature
+                message, force_docs_only=True, mask_pii=True, temperature=0.1
             )
             
             # Get language from result
@@ -469,20 +471,7 @@ Response:"""
             **Active Moderation System:** Automatically filters inappropriate content and off-topic questions.
             """)
             
-            # Settings row
-            with gr.Row():
-                force_docs = gr.Checkbox(
-                    value=True, 
-                    label="Responder apenas com base nos documentos"
-                )
-                mask_pii = gr.Checkbox(
-                    value=True, 
-                    label="Proteger dados sensíveis (PII)"
-                )
-                temperature = gr.Slider(
-                    0.0, 1.0, value=0.2, step=0.1,
-                    label="Criatividade (0=conservador, 1=criativo)"
-                )
+            # Note: Removed settings as banking chatbot should always be conservative and document-based
             
             # Chat interface
             chatbot = gr.Chatbot(
@@ -548,20 +537,19 @@ Response:"""
                 with gr.Column(scale=1):
                     gr.Markdown("""
                     ---
-                    **Desenvolvido por:** [Paulino Cristovao](https://github.com/Paulino-Cristovao)  
-                    **Developed by:** [Paulino Cristovao](https://github.com/Paulino-Cristovao)
+                    **Desenvolvido por:** [Paulino Cristovao](https://github.com/Paulino-Cristovao)
                     """)
             
             # Event handlers
             send_btn.click(
                 chat_fn,
-                inputs=[chatbot, msg_input, force_docs, mask_pii, temperature],
+                inputs=[chatbot, msg_input],
                 outputs=[chatbot, msg_input]
             )
             
             msg_input.submit(
                 chat_fn,
-                inputs=[chatbot, msg_input, force_docs, mask_pii, temperature],
+                inputs=[chatbot, msg_input],
                 outputs=[chatbot, msg_input]
             )
             
@@ -588,7 +576,7 @@ Response:"""
                     outputs=msg_input
                 ).then(
                     chat_fn,
-                    inputs=[chatbot, msg_input, force_docs, mask_pii, temperature],
+                    inputs=[chatbot, msg_input],
                     outputs=[chatbot, msg_input]
                 )
             
