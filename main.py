@@ -344,31 +344,6 @@ Response:"""
                 'language': question_language
             }
 
-    def run_interactive_session(self) -> None:
-        """Run interactive Q&A session."""
-        print("\nAssistente Bancário de Moçambique ready! Type 'quit' to exit.\n")
-
-        while True:
-            question = input("Faça uma pergunta sobre serviços bancários: ").strip()
-
-            if question.lower() in ["quit", "exit", "q", "sair"]:
-                print("Até logo!")
-                break
-
-            if not question:
-                continue
-
-            try:
-                result = self.query_with_confidence(question)
-                if result['answer_type'] == 'blocked':
-                    print(f"\n{result['answer']}\n")
-                else:
-                    sources_md = self.format_sources_detailed(result['sources'])
-                    print(f"\n{result['answer']}")
-                    print(f"\nConfiança: {result['confidence']}")
-                    print(f"\nFontes:\n{sources_md}\n")
-            except Exception as e:
-                print(f"Erro: {e}\n")
 
     def create_gradio_interface(self) -> gr.Blocks:
         """Create Gradio web interface."""
@@ -663,23 +638,13 @@ def main() -> int:
     parser.add_argument(
         "--pdf", required=True, help="Caminho para arquivo PDF ou diretório com PDFs / Path to PDF file or directory with PDFs"
     )
-    parser.add_argument(
-        "--interface", 
-        choices=["cli", "web"], 
-        default="web",
-        help="Tipo de interface: cli (linha de comando) ou web (Gradio)"
-    )
     args = parser.parse_args()
 
     try:
         app = setup_application(args.pdf)
-        
-        if args.interface == "web":
-            print("\nLançando interface web...")
-            print("Acesse: http://localhost:7860")
-            app.launch_web_interface()
-        else:
-            app.run_interactive_session()
+        print("\nLançando interface web...")
+        print("Acesse: http://localhost:7860")
+        app.launch_web_interface()
 
     except Exception as e:
         print(f"Erro: {e}")
