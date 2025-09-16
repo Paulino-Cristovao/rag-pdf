@@ -85,5 +85,6 @@ logs/
 .dmypy.json
 dmypy.json
 
-# PDF files (optional - remove if you want to track test PDFs)
-*.pdf
+# Allow PDF files and Data folder for banking documents
+!Data/
+!*.pdf
